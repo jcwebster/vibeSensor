@@ -11,7 +11,8 @@ This will allow the user to ride the board with different sets of wheels over di
 
 I currently have an ~~STM32 L475 Discovery board I plan to use the accelerometer on,~~ just kidding, I realized that's too complicated and that using an Arduino (Nano) is perfectly acceptable for this application, and program it in C (of course). I'll use a couple of simple switches/buttons for power and start, an old rechargeable mobile battery pack or lithium ion battery for power, and design a 3D printed casing with a mounting system. Stay tuned!
 
-Update 19.08.18: Going to use SPI with a 7-seg display for readouts.
-Update 8.09.18: Selected MPU-6050 6-axis acclerometer and gyro for vibration reading. I could have selected a simpler sensor (such as [this one](https://www.adafruit.com/product/2384)) but I like the idea of developing my I2C and SPI interfacing skills.
+**Update 19.08.18:** Using SPI with a MAX7219 7-seg display for readouts.
+
+**Update 8.09.18:** Selected MPU-6050 6-axis acclerometer and gyro for vibration reading. I could have selected a simpler sensor (such as [this one](https://www.adafruit.com/product/2384)) but I like the idea of developing my I2C and SPI interfacing skills.
 
 **You're welcome to use any of my code you like, but please give credit and I'd love to hear about it!**

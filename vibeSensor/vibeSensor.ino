@@ -8,9 +8,12 @@
  */
 
 /* Includes ------------------------------------------------------------------*/
-#include "MPU6050.h"
+#include <MPU6050_tockn.h>
+#include <LedControl.h>
+#include <Wire.h>
 /* Private typedef -----------------------------------------------------------*/
 /* Private define ------------------------------------------------------------*/
+#define LOOP_DELAY    250   //250ms delay at the end of each loop (for lcd display)
 /* Private constants ------------------------------------------------------------*/
 const int buttonPin = 2;    // the number of the footswitch pin
 const int ledPin = 13;      // general purpose LED pin
@@ -28,14 +31,28 @@ int lastButtonState = LOW;   // the previous reading from the input pin
 unsigned long lastDebounceTime = 0;  // the last time the output pin was toggled
 unsigned long debounceDelay = 50;    // the debounce time; increase if the output flickers
 
+uint32_t mainTimer = 0;
+uint32_t mainElapsed = 0;
+
+MPU6050 mpu6050(Wire);        //create sensor
+/*
+ * Pin12 to DataIn
+ * Pin11 to CLK
+ * Pin10 to LOAD
+ * 2, number of MAX72x devices
+ */
+LedControl lc=LedControl(12,11,10,2); 
+
+
 /* Private function prototypes -----------------------------------------------*/
+void hello();
 void msgDisplay();
 int checkForButtonPush();
 void initializeRun();
 /* Private functions ---------------------------------------------------------*/
 
 /**
-  * @brief  setup peripherals
+  * @brief  Setup peripherals
   * @param  None
   * @retval None
   */
@@ -45,15 +62,23 @@ void setup() {
  *  LED display
  *  accelerometer
  */
+  Serial.begin(9600);
+  Wire.begin();
 
+  mpu6050.begin();
+
+  lc.shutdown(0,false);     //wakeup call
+  lc.setIntensity(0,8);     //lvl 0-15
+  lc.clearDisplay(0);
+  
   pinMode(buttonPin, INPUT);
   pinMode(ledPin, OUTPUT);
 
+  
   // set initial LED state
   digitalWrite(ledPin, ledState);
 
-  //msgDisplay("Welcome");
-
+  hello();
 }
 
 
@@ -63,8 +88,15 @@ void setup() {
   * @retval None
   */
 void loop() {
-  // put your main code here, to run repeatedly:
 
+  mainElapsed = HAL_GetTick();
+
+  if (mainElapsed - mainTimer > DELAY){
+
+//      doSomething(HEARTBEAT_LED);
+
+      mainTimer = mainElapsed;
+  }
   if (startup){
     //msgDisplay("New run");
 
@@ -113,7 +145,27 @@ void loop() {
     return;
   }
   
-  
+
+  delay(LOOP_DELAY);
+}//end: loop()
+
+/**
+  * @brief  Display "hello"
+  * @param  None
+  * @retval None
+  */
+void hello(){
+  //h
+  lc.setChar(0,3,'h',0); //may need to be upper case H or use setRow();
+  //may need delay between segment sets?
+  //E
+  lc.setChar(0,2,0xE,0); //either setDig or setChar, might need 'E'
+  //1
+  lc.setDigit(0,1,0x1,0);
+  //1
+  lc.setDigit(0,0,0x1,0);
+  //o
+  lc.setRow(0,0,0x1D);
 }
 
 /**
@@ -158,5 +210,5 @@ int checkForButtonPush(){
   // save the reading. Next time through the loop, it'll be the lastButtonState:
   lastButtonState = reading;
 
-}
+}//end checkForButtonPush()
 
