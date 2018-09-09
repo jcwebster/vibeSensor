@@ -2,7 +2,7 @@
   ******************************************************************************
   * @file    vibeSensor/vibeSensor.c 
   * @author  John Webster | 07/09/18
-  * @brief   this is the firmware for an electronic vibration sensor for longboards, 
+  * @brief   Firmware for an electronic vibration sensor for longboards, 
   *          meant to give comparative readings when used with different setups.
   ******************************************************************************
  */
@@ -33,7 +33,12 @@ unsigned long debounceDelay = 50;    // the debounce time; increase if the outpu
 
 uint32_t mainTimer = 0;
 uint32_t mainElapsed = 0;
-
+/*
+ * stage[0]=set after start button push, waits for board to be levelled
+ * stage[1]=set after board is levelled, runs DAQ loop
+ * stage[2]=set after DAQ finishes, displays results and resets data
+ */
+uint8_t stage[4]={0,0,0,0};
 MPU6050 mpu6050(Wire);        //create sensor
 /*
  * Pin12 to DataIn
@@ -104,7 +109,7 @@ void loop() {
     startup = false;
   }
 
-  startRun = checkForButtonPush();
+  stage[0] = checkForButtonPush(); 
 
   if (stage[0]){
     stage[0] = 0;
@@ -137,7 +142,6 @@ void loop() {
     //do a quick runtime analysis of this controller structure tmrw, 
     //i think it could be more efficient...
     //it does, however, allow for expansion for say, a bluetooth data download stage
-    stage[0] = 1;
   } else {
     
     //msgDisplay("ERROR");
