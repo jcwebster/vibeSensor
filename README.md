@@ -13,6 +13,6 @@ I currently have an ~~STM32 L475 Discovery board I plan to use the accelerometer
 
 **Update 19.08.18:** Using SPI with a MAX7219 7-seg display for readouts.
 
-**Update 8.09.18:** Selected MPU-6050 6-axis acclerometer and gyro for vibration reading. I could have selected a simpler sensor (such as [this one](https://www.adafruit.com/product/2384)) but I like the idea of developing my I2C and SPI interfacing skills.
+**Update 8.09.18:** Selected MPU-6050 6-axis acclerometer and gyro for vibration reading. I could have selected a simpler sensor (such as [this one](https://www.adafruit.com/product/2384)) but I like the idea of developing my I2C and SPI interfacing skills. Using [LEDControl](https://github.com/wayoda/LedControl) and [MPU6050](https://github.com/tockn/MPU6050_tockn) Arduino libraries.
 
 **You're welcome to use any of my code you like, but please give credit and I'd love to hear about it!**
