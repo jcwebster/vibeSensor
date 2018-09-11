@@ -13,10 +13,12 @@
 #include <Wire.h>
 /* Private typedef -----------------------------------------------------------*/
 /* Private define ------------------------------------------------------------*/
-#define LOOP_DELAY    250   //250ms delay at the end of each loop (for lcd display)
+#define LCD_DELAY    50   //250ms delay at the end of each loop (for lcd display)
+#define HEARTBEAT_DELAY 1000  //2s period heartbeat
 /* Private constants ------------------------------------------------------------*/
 const int buttonPin = 2;    // the number of the footswitch pin
-const int ledPin = 13;      // general purpose LED pin
+const int ledPin = 7;      // general purpose LED pin
+const int heartbeat = 13;   //use D13 LED as heartbeat for debugging
 const int accelPin = 11;    // the number of the accelerometer pin
 const int accelAddress = 0x68; // may be pull-down resistor at AD0 (address = 0x68), others have a pull-up resistor (address = 0x69).
 
@@ -34,12 +36,13 @@ unsigned long debounceDelay = 50;    // the debounce time; increase if the outpu
 uint32_t mainTimer = 0;
 uint32_t mainElapsed = 0;
 /*
- * stage[0]=set after start button push, waits for board to be levelled
- * stage[1]=set after board is levelled, runs DAQ loop
- * stage[2]=set after DAQ finishes, displays results and resets data
+ * stage 0= after initialization finishes the first time
+ * stage 1=set after start button push, waits for board to be levelled
+ * stage 2=set after board is levelled, runs DAQ loop
+ * stage 3=set after DAQ finishes, displays results and resets data
  */
-uint8_t stage[4]={0,0,0,0};
-MPU6050 mpu6050(Wire);        //create sensor
+uint8_t stage=0;
+MPU6050 mpu6050(Wire);        //vibration sensor
 /*
  * Pin12 to DataIn
  * Pin11 to CLK
@@ -52,8 +55,10 @@ LedControl lc=LedControl(12,11,10,2);
 /* Private function prototypes -----------------------------------------------*/
 void hello();
 void msgDisplay();
-int checkForButtonPush();
-void initializeRun();
+bool checkForButtonPush();
+bool boardLevelled();
+void displayGO();
+
 /* Private functions ---------------------------------------------------------*/
 
 /**
@@ -78,12 +83,14 @@ void setup() {
   
   pinMode(buttonPin, INPUT);
   pinMode(ledPin, OUTPUT);
+  pinMode(heartbeat, OUTPUT);
 
   
   // set initial LED state
   digitalWrite(ledPin, ledState);
 
-  hello();
+  hello();  
+  stage[0] = 1; //go!
 }
 
 
@@ -96,81 +103,102 @@ void loop() {
 
   mainElapsed = HAL_GetTick();
 
-  if (mainElapsed - mainTimer > DELAY){
+  if (mainElapsed - mainTimer > HEARTBEAT_DELAY){
+    if (digitalRead(heartbeat) == HIGH){
+      digitalWrite(heartbeat,LOW);
+    } else {
+      digitalWrite(heartbeat, HIGH);
+    }
 
-//      doSomething(HEARTBEAT_LED);
-
-      mainTimer = mainElapsed;
+    mainTimer = mainElapsed;
   }
+/*
   if (startup){
     //msgDisplay("New run");
 
     //clear data
     startup = false;
   }
+*/
 
-  stage[0] = checkForButtonPush(); 
+  switch (stage){
 
-  if (stage[0]){
-    stage[0] = 0;
+    case 0:
+      if (checkForButtonPush()){
+        stage++;
+      }
+      break;
+    case 1:
+      if (boardLevelled()){
+        stage++;
+        displayGO();
+        startTime = millis(); //start timer
+      }
+      break;
+    case 2:
 
-    //go DAQ!
-    initializeRun(); //wait for board to be level
+      /*
+       * collect and store data here
+       */
+       
+      if (millis() - startTime) > RUN_TIME){
+        stage++;
 
-    //startTime = millis(); //set up timer
+        //make sure to store end of data here
 
-    stage[1] = 1;
-  } else if (stage[1]){   
-    stage[1] = 0;
-   
-    //DAQ
-
-    //
-
-    //is timer done?
-    if (timeUp){
-      stage[2] = 1;
-    }
-  } else if (stage[2]){
-    stage[2] = 0;
-
-   //Display results
-
-   //
-
-   
-    //do a quick runtime analysis of this controller structure tmrw, 
-    //i think it could be more efficient...
-    //it does, however, allow for expansion for say, a bluetooth data download stage
-  } else {
-    
-    //msgDisplay("ERROR");
-    digitalWrite(ledPin, HIGH);
-    return;
+        /*
+         * data processing...
+         */     
+      }
+      
+      break;
+    case 3:
+      /*
+       * display data for user
+       */
+      stage=0;
+      break;
+    default:
+      //msgDisplay("ERROR");
+      digitalWrite(ledPin, HIGH);
+      digitalWrite(heartbeat, HIGH);
+      break;
   }
   
-
-  delay(LOOP_DELAY);
+  delay(LCD_DELAY);
 }//end: loop()
 
 /**
-  * @brief  Display "hello"
+  * @brief  Display "hello" for 2 seconds
   * @param  None
   * @retval None
   */
 void hello(){
-  //h
-  lc.setChar(0,3,'h',0); //may need to be upper case H or use setRow();
-  //may need delay between segment sets?
-  //E
-  lc.setChar(0,2,0xE,0); //either setDig or setChar, might need 'E'
-  //1
-  lc.setDigit(0,1,0x1,0);
-  //1
-  lc.setDigit(0,0,0x1,0);
-  //o
-  lc.setRow(0,0,0x1D);
-}
+
+  for (int i=0; i<5; i++){
+    switch(i){
+      case 0: //h
+        lc.setChar(0,3,'h',0); //may need to be upper case H or use setRow();
+        break;
+      case 1: //E
+        lc.setChar(0,2,0xE,0); //either setDig or setChar, might need 'E' 
+        break;
+      case 2: //1
+        lc.setDigit(0,1,0x1,0);
+        break;
+      case 3: //1
+        lc.setDigit(0,0,0x1,0);
+        break;
+      case 4: //o
+        lc.setRow(1,3,0x1D);
+        break;     
+    }
+    
+    delay(LCD_DELAY); //delete or extend as necessary
+  }
+
+  delay(2000);
+}//end:hello()
 
 /**
   * @brief  Check if button has been pushed. 
@@ -215,4 +243,61 @@ int checkForButtonPush(){
   lastButtonState = reading;
 
 }//end checkForButtonPush()
+
+/**
+  * @brief  Set up sensors for DAQ
+  * @param  None
+  * @retval None
+  */
+bool boardLevelled(){
+  int flag=0;
+  /*
+   * read gyro and return true if < 15deg from level
+   */
+}
+
+/**
+  * @brief  Blink "GO" for 1 second
+  * @param  None
+  * @retval None
+  */
+void displayGO(){
+
+//note: it's ok to block on this function, to give the rider a reaction time to start pushing the board and get moving
+  const int GO_TIME = 2500; //how long to blink GO for
+  int elapsed = 0;
+  long int startGo = millis();
+
+  for (int i=0; i<4; i++){
+    switch(i){
+      //art.
+      case 0: //
+        lc.setRow(0,3, B01001110); 
+        break;
+      case 1: //
+        lc.setRow(0,2,B00101101); 
+        break;
+      case 2: //
+        lc.setRow(0,1,B00110000);
+        break;
+      case 3: //
+        lc.setRow(1,3,B01111110);
+        break;
+      case 4:
+        lc.setRow(1,3,B00000110);
+        break;
+    }
+    
+    delay(LCD_DELAY); //delete or extend as necessary
+  }
+  
+  while (millis() - startGo < GO_TIME){
+    if (millis() - elapsed > 200){
+      elapsed = millis();
+      signState = !signState;
+      lc.shutdown(0,signState);  //blink LCD on or off
+      delay(LCD_DELAY);
+    }
+  }
+}//end:displayGO()
 
