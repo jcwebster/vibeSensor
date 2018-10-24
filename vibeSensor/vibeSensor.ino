@@ -15,6 +15,7 @@
 /* Private define ------------------------------------------------------------*/
 #define LCD_DELAY    50   //250ms delay at the end of each loop (for lcd display)
 #define HEARTBEAT_DELAY 1000  //2s period heartbeat
+#define RUN_TIME      10000
 /* Private constants ------------------------------------------------------------*/
 const int buttonPin = 2;    // the number of the footswitch pin
 const int ledPin = 7;      // general purpose LED pin
@@ -29,17 +30,19 @@ bool startRun = false;       // flag to signal start of DAQ
 int ledState = HIGH;         // the current state of the output pin
 int buttonState;             // the current reading from the input pin
 int lastButtonState = LOW;   // the previous reading from the input pin
+bool signState;
 
 unsigned long lastDebounceTime = 0;  // the last time the output pin was toggled
 unsigned long debounceDelay = 50;    // the debounce time; increase if the output flickers
 
 uint32_t mainTimer = 0;
 uint32_t mainElapsed = 0;
+uint32_t startTime = 0;
 /*
- * stage 0= after initialization finishes the first time
- * stage 1=set after start button push, waits for board to be levelled
- * stage 2=set after board is levelled, runs DAQ loop
- * stage 3=set after DAQ finishes, displays results and resets data
+ * stage =0; after initialization finishes the first time
+ * stage =1; set after start button push, waits for board to be levelled
+ * stage =2; set after board is levelled, runs DAQ loop
+ * stage =3; set after DAQ finishes, displays results and resets data
  */
 uint8_t stage=0;
 MPU6050 mpu6050(Wire);        //vibration sensor
@@ -55,7 +58,7 @@ LedControl lc=LedControl(12,11,10,2);
 /* Private function prototypes -----------------------------------------------*/
 void hello();
 void msgDisplay();
-bool checkForButtonPush();
+//bool checkForButtonPush();
 bool boardLevelled();
 void displayGO();
 
@@ -90,7 +93,7 @@ void setup() {
   digitalWrite(ledPin, ledState);
 
   hello();  
-  stage[0] = 1; //go!
+  stage++; //go!
 }
 
 
@@ -101,7 +104,7 @@ void setup() {
   */
 void loop() {
 
-  mainElapsed = HAL_GetTick();
+  mainElapsed = millis();
 
   if (mainElapsed - mainTimer > HEARTBEAT_DELAY){
     if (digitalRead(heartbeat) == HIGH){
@@ -141,7 +144,7 @@ void loop() {
        * collect and store data here
        */
        
-      if (millis() - startTime) > RUN_TIME){
+      if ((millis() - startTime) > RUN_TIME){
         stage++;
 
         //make sure to store end of data here
@@ -300,4 +303,3 @@ void displayGO(){
     }
   }
 }//end:displayGO()
-
