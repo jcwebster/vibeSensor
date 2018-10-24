@@ -49,10 +49,10 @@ MPU6050 mpu6050(Wire);        //vibration sensor
 /*
  * Pin12 to DataIn
  * Pin11 to CLK
- * Pin10 to LOAD
+ * Pin10 to LOAD (~CS)
  * 2, number of MAX72x devices
  */
-LedControl lc=LedControl(12,11,10,2); 
+LedControl lc=LedControl(12,11,10,1); 
 
 
 /* Private function prototypes -----------------------------------------------*/
@@ -81,7 +81,7 @@ void setup() {
   mpu6050.begin();
 
   lc.shutdown(0,false);     //wakeup call
-  lc.setIntensity(0,8);     //lvl 0-15
+  lc.setIntensity(0,0);     //0,lvl 0-15
   lc.clearDisplay(0);
   
   pinMode(buttonPin, INPUT);
@@ -181,20 +181,22 @@ void hello(){
   for (int i=0; i<5; i++){
     switch(i){
       case 0: //h
-        lc.setChar(0,3,'h',0); //may need to be upper case H or use setRow();
+        lc.setChar(0,4,'h',0); //may need to be upper case H or use setRow();
         break;
       case 1: //E
-        lc.setChar(0,2,0xE,0); //either setDig or setChar, might need 'E' 
+        lc.setChar(0,3,0xE,0); //either setDig or setChar, might need 'E' 
         break;
       case 2: //1
-        lc.setDigit(0,1,0x1,0);
+        lc.setDigit(0,2,0x1,0);
         break;
       case 3: //1
-        lc.setDigit(0,0,0x1,0);
+        lc.setDigit(0,1,0x1,0);
         break;
       case 4: //o
-        lc.setRow(1,3,0x1D);
-        break;     
+        lc.setRow(0,0,0x1D);
+        break; 
+      default:
+        break;    
     }
     
     delay(LCD_DELAY); //delete or extend as necessary
