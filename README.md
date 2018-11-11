@@ -17,5 +17,5 @@ I currently have an ~~STM32 L475 Discovery board I plan to use the accelerometer
 
 **Update 11.09.18:** Check out a visual representation of the program flow [here](https://www.lucidchart.com/documents/view/690388a5-8b3c-460a-bcd9-24e1e40fabe5/0).  
 
-
+**Update 11.11.18:** Firmware flowchart updated (above).
 **You're welcome to use any of my code you like, but please give credit and I'd love to hear about it!**
