@@ -17,11 +17,12 @@
 #define DEBUG         1     //comment out to eliminate print statements and other testing
 #define LCD_DELAY    50   //250ms delay at the end of each loop (for lcd display)
 #define HEARTBEAT_DELAY 1000  //2s period heartbeat
-#define RUN_TIME      10000
+//#define RUN_TIME      10000
 /* Private constants ------------------------------------------------------------*/
 //const int buttonPin = 2;    // the number of the footswitch pin
 //int buttonPushed;             // the current reading from the input pin
 
+const uint32_t RUN_TIME=10000;
 const byte buttonPin = 2; //now configured as interrupt pin
 volatile byte buttonPushed = LOW;
 
@@ -44,6 +45,10 @@ unsigned long debounceDelay = 50;    // the debounce time; increase if the outpu
 uint32_t mainTimer = 0;
 uint32_t mainElapsed = 0;
 uint32_t startTime = 0;
+uint32_t daqElapsed = 0;
+int progressFraction =0;
+
+
 /*
  * stage =0; after initialization finishes the first time
  * stage =1; set after start button push, waits for board to be levelled
@@ -91,7 +96,6 @@ void setup() {
 #ifdef DEBUG
  /*    testing only    */
   pinMode(fakeInterruptPin, OUTPUT);
-  
 #endif
 
   Serial.begin(9600);
@@ -103,9 +107,9 @@ void setup() {
   
 //  pinMode(buttonPin, INPUT); //now interrupt pin
   pinMode(ledPin, OUTPUT);
-  pinMode(heartbeat, OUTPUT);
+  pinMode(heartbeat, OUTPUT); //heartbeat onboard pin 13
   pinMode(buttonPin, INPUT_PULLUP);
-  attachInterrupt(digitalPinToInterrupt(buttonPin), checkForButtonPush, CHANGE); //'blink' is the ISR
+  attachInterrupt(digitalPinToInterrupt(buttonPin), checkForButtonPush, RISING); //'blink' is the ISR
  
   mpu6050.begin();
  
@@ -113,9 +117,7 @@ void setup() {
   digitalWrite(ledPin, ledState);
 
   hello();  
-  freezeAndCalibrate(); //board must be held still for gyro calibration
-  delay(1000);
-  mpu6050.update(); //updates all data
+  
 //  displayGo();
   displayPush2Start();
   delay(1000);
@@ -141,50 +143,89 @@ void loop() {
   }
 
   switch (stage){
-
-    case 0: //calibrate gyro, set board down
+    case 0: //wait for button push to start
 #ifdef DEBUG
       Serial.println("case0");
 #endif
       if (buttonPushed){
+        freezeAndCalibrate(); //board must be held still for gyro calibration
+        delay(1000);
+        mpu6050.update(); //updates all data
         stage++;
+        buttonPushed=false;
+#ifdef DEBUG
+        digitalWrite(fakeInterruptPin, LOW); //test response to button push
+#endif
       }
       displayPush2Start();
       delay(2000);
 #ifdef DEBUG
-      if (mainTimer> 15000){
+      if (mainTimer> 1500){
         digitalWrite(fakeInterruptPin, HIGH); //test response to button push
+        Serial.println("button pushed");
       }
 #endif
       break;
-    case 1:
+    case 1: //wait for board to be levelled
 #ifdef DEBUG
       Serial.println("case1");
+
+      lc.clearDisplay(0);
+
+      mpu6050.update(); //updates all data 
+      Serial.print("angleX : ");
+      Serial.print(mpu6050.getAngleX());
+      Serial.print("\tangleY : ");
+      Serial.print(mpu6050.getAngleY());
+      Serial.print("\tangleZ : ");
+      Serial.println(mpu6050.getAngleZ());
+      delay(500);
 #endif
+
       if (boardLevelled()){
  
-
-        stage++;
+        displayGetReady();
+        delay(2500);
+        lc.setDigit(0,6,0x1,0);
+        delay(1500);
+        lc.setDigit(0,6,0x0,0);
+        delay(1500);
         displayGO();
+        lc.clearDisplay(0);
+
         startTime = millis(); //start timer
+        stage++;
       }
       break;
     case 2:
+    
 #ifdef DEBUG
       Serial.println("case2");
 #endif
       /*
        * collect and store data here
        */
-       
-      if ((millis() - startTime) > RUN_TIME){
+      daqElapsed = millis() - startTime;
+      mpu6050.update();
+      Serial.println(daqElapsed);
+
+      if (daqElapsed > RUN_TIME){
+        lc.setRow(0,0,B00001000);
+        delay(LCD_DELAY);
         stage++;
-
+        Serial.println("Done DAQ!");
         //make sure to store end of data here
-
         /*
          * data processing...
          */     
+      } 
+
+      if ((daqElapsed*8) > (RUN_TIME*progressFraction)){
+        for (int i=0; i < progressFraction; i++){
+          lc.setRow(0,7-i, B00001000);
+          delay(LCD_DELAY);
+        }
+        progressFraction++;
       }
       
       break;
@@ -234,7 +275,7 @@ void hello(){
       default:
         break;    
     }
-    
+
     delay(LCD_DELAY); //delete or extend as necessary
   }
 
@@ -251,35 +292,38 @@ void freezeAndCalibrate(){
 
   for (int i=0; i<10; i++){
     switch(i){
-      case 0: //f
-        lc.setChar(0,7,'F',0); //may need to be upper case H or use setRow();
+      case 0: //L
+        lc.setChar(0,7,'L',0); 
         break;
-      case 1: //r
-        lc.setRow(0,6,0x05);
+      case 1: //E
+        lc.setChar(0,6,0xE,0); 
         break;
-      case 2: //E
-        lc.setChar(0,5,0xE,0); 
+      case 2: //v
+        lc.setRow(0,5,B00011100);
         break;
       case 3: //E
-        lc.setChar(0,4,0xE,0); 
+        lc.setChar(0,4,0xE,0);
         break;
-      case 4: //z
-        lc.setRow(0,3,B01101101);
-        break;
-      case 5: //E
-        lc.setChar(0,2,0xE,0); 
-        break;
+      case 4: //L
+        lc.setChar(0,3,'L',0); 
+        break;  
+      case 5: //...
+        lc.setRow(0,3,B10000000|B00001110);
+        lc.setRow(0,2,B10000000);
+        lc.setRow(0,1,B10000000);
+        break;   
       case 6: //3
         lc.setChar(0,0,'3',0); 
-        delay(2000);
+        delay(1500);
         break;
       case 7: //2
         lc.setChar(0,0,'2',0); 
-        delay(1000);
+        delay(1500);
         break;
       case 8: //1
         lc.setChar(0,0,'1',0); 
         mpu6050.calcGyroOffsets(true); 
+//        mpu6050.setGyroOffsets(3.2075, 0.6875, 0.45); //not consistent enough
         break;
       case 9: //0
         lc.setChar(0,0,'0',0);
@@ -357,6 +401,10 @@ void checkForButtonPush(){
   if ((millis() - lastDebounceTime) > debounceDelay) { //millis() may not work here, "will never increment inside an ISR."
     buttonPushed = !buttonPushed;
   }
+
+  #ifdef DEBUG
+  Serial.print("i");
+  #endif
   
   lastDebounceTime=millis(); //this will cause the state to be switched on the first triggering of the interrupt, and not on the subsequent bounces
 
@@ -403,8 +451,79 @@ bool boardLevelled(){
   /*
    * read gyro and return true if < 15deg from level
    */
+   mpu6050.update(); //updates all data 
+
+   if (mpu6050.getAngleX() < 20 && mpu6050.getAngleX() > -20 
+        && mpu6050.getAngleY() < 20 && mpu6050.getAngleX() > -20){
+
+     Serial.print("board levelled! x: ");
+     Serial.print(mpu6050.getAngleX());  
+     Serial.print(" y: ");
+     Serial.println(mpu6050.getAngleY()); 
+     return true;
+   }
+   else {
+    return false;
+   }
 }
 
+/**
+  * @brief  Give "get ready" msg
+  * @param  None
+  * @retval //PREPARE
+            //2 PUSH
+  */
+void displayGetReady(){
+  
+  for (int i=0; i<12; i++){
+    switch(i){
+      case 0: //P
+        lc.clearDisplay(0);
+        lc.setChar(0,7,'P',0);
+        break;
+      case 1: //r
+        lc.setRow(0,6,B00000101);
+        break;
+      case 2: //E
+        lc.setChar(0,5,'E',0); 
+        break;
+      case 3: //P
+        lc.setChar(0,4,'P',0); 
+        break;
+      case 4: //A
+        lc.setChar(0,3,'A',0); 
+        break;
+      case 5: //R
+        lc.setRow(0,2,B00000101);
+        break;
+      case 6: //E
+        lc.setChar(0,1,'E',0); 
+        delay(1500);
+        break;
+      case 7: //2
+        lc.clearDisplay(0);
+        lc.setDigit(0,6,0x2,0);
+        break;
+      case 8: //P
+        lc.setChar(0,3,'P',0);
+        break;
+      case 9: //U
+        lc.setRow(0,2,B00111110);
+        break;
+      case 10: //S
+        lc.setChar(0,1,'5',0); 
+        break;
+      case 11: //H
+        lc.setRow(0,0,B00110111);
+        break;
+      default:
+        break;  
+    }
+    
+    delay(LCD_DELAY); //delete or extend as necessary
+  }
+}//end:displayGetReady()
+  
 /**
   * @brief  Blink "GO" for 1 second
   * @param  None
@@ -417,23 +536,25 @@ void displayGO(){
   int elapsed = 0;
   long int startGo = millis();
 
-  for (int i=0; i<4; i++){
+  for (int i=0; i<5; i++){
     switch(i){
       //art.
-      case 0: //
-        lc.setRow(0,3, B01001110); 
+      case 0: //G
+        lc.clearDisplay(0);
+        lc.setRow(0,5, B01001110); 
         break;
-      case 1: //
-        lc.setRow(0,2,B00101101); 
+      case 1: //G
+        lc.setRow(0,4,B01011001); 
         break;
       case 2: //
-        lc.setRow(0,1,B00110000);
+        lc.setRow(0,3,B00110000);
         break;
       case 3: //
-        lc.setRow(1,3,B01111110);
+        lc.setRow(0,2,B01111110);
         break;
       case 4:
-        lc.setRow(1,3,B00000110);
+        lc.setRow(0,1,B00000110);
+        lc.setRow(0,0,B10110000);
         break;
     }
     
@@ -441,11 +562,13 @@ void displayGO(){
   }
   
   while (millis() - startGo < GO_TIME){
-    if (millis() - elapsed > 200){
+    if (millis() - elapsed > 400){
       elapsed = millis();
       signState = !signState;
       lc.shutdown(0,signState);  //blink LCD on or off
       delay(LCD_DELAY);
     }
   }
+  lc.shutdown(0,false);  //blink LCD on or off
+
 }//end:displayGO()
