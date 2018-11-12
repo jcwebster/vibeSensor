@@ -17,12 +17,13 @@
 #define DEBUG         1     //comment out to eliminate print statements and other testing
 #define LCD_DELAY    50   //250ms delay at the end of each loop (for lcd display)
 #define HEARTBEAT_DELAY 1000  //2s period heartbeat
-//#define RUN_TIME      10000
+#define RUN_TIME      (10000)
+#define NUM_PTS       (700)
 /* Private constants ------------------------------------------------------------*/
 //const int buttonPin = 2;    // the number of the footswitch pin
 //int buttonPushed;             // the current reading from the input pin
 
-const uint32_t RUN_TIME=10000;
+//const uint32_t RUN_TIME=10000;
 const byte buttonPin = 2; //now configured as interrupt pin
 volatile byte buttonPushed = LOW;
 
@@ -48,6 +49,10 @@ uint32_t startTime = 0;
 uint32_t daqElapsed = 0;
 int progressFraction =0;
 
+uint32_t daqPt = 0;
+uint8_t data[NUM_PTS] = {};
+uint32_t sum = 0;
+uint8_t vibeMagnitude = 0;
 
 /*
  * stage =0; after initialization finishes the first time
@@ -82,6 +87,7 @@ void msgDisplay();
 bool boardLevelled();
 void displayGO();
 void displayPush2Start();
+void results(uint8_t);
 
 #ifdef DEBUG
 /*    testing only    */
@@ -207,8 +213,13 @@ void loop() {
        */
       daqElapsed = millis() - startTime;
       mpu6050.update();
-      Serial.println(daqElapsed);
+      Serial.print("\taccZ : ");Serial.println(mpu6050.getAccZ());
+      //store mag of acc-z in array for i-th iteration;
 
+      data[daqPt] = mpu6050.getAccZ();
+      daqPt++;
+      //when done, calculate RMS vibe
+      
       if (daqElapsed > RUN_TIME){
         lc.setRow(0,0,B00001000);
         delay(LCD_DELAY);
@@ -232,10 +243,29 @@ void loop() {
     case 3:
 #ifdef DEBUG
       Serial.println("case3");
+      
 #endif
       /*
        * display data for user
        */
+       //when done, calculate RMS vibe      
+      for (int k=0; k < (daqPt); k++){
+        
+        data[k] = data[k]/1.4142135624;
+        sum += data[k];
+      }
+      
+      /* 
+       *by taking the RMS average of all data points, 
+       *I am calculating the RMS value of accleration vertically, 
+       *in g's (vibeMagnitude*9.8 gives m/s2)    
+       *  THIS IS WHAT I WANT OUTPUT  
+       */
+      vibeMagnitude = sum / (NUM_PTS); 
+      daqPt = 0;
+
+      lc.clearDisplay(0);
+      results(vibeMagnitude);
       stage=0;
       break;
     default:
@@ -572,3 +602,77 @@ void displayGO(){
   lc.shutdown(0,false);  //blink LCD on or off
 
 }//end:displayGO()
+
+
+/**
+  * @brief  Display results post-DAQ
+  * @param  None
+  * @retval None
+  */
+void results(uint8_t vibe){
+  
+//  const int GO_TIME = 2500; //how long to blink GO for
+//  int elapsed = 0;
+//  long int startGo = millis();
+
+  for (int i=0; i<6; i++){ //FINISH
+    switch(i){
+      //art.
+      case 0: //F
+        lc.clearDisplay(0);
+        lc.setRow(0,5, B01000111); 
+        break;
+      case 1: //I
+        lc.setRow(0,4,B00110000); 
+        break;
+      case 2: //N
+        lc.setRow(0,3,B00010101);
+        break;
+      case 3: //I
+        lc.setRow(0,2,B00110000); 
+        break;
+      case 4: //S
+        lc.setRow(0,1,B01011011);
+        break;
+      case 5: //H
+        lc.setRow(0,0,B00110111);
+        break;
+    }
+    
+    delay(LCD_DELAY); //delete or extend as necessary
+  }
+  
+  delay(2500);
+  for (int i=0; i<6; i++){ //rEcord
+    switch(i){
+      case 0: //r
+        lc.clearDisplay(0);
+        lc.setRow(0,6, B00000101); 
+        break;
+      case 1: //e
+        lc.setRow(0,5,B01001111); 
+        break;
+      case 2: //c
+        lc.setRow(0,4,B00001101);
+        break;
+      case 3: //o
+        lc.setRow(0,3,B00011101); 
+        break;
+      case 4: //r
+        lc.setRow(0,2, B00000101); 
+        break;
+      case 5: //d
+        lc.setRow(0,1,B10111101);
+        lc.setRow(0,0,B10000000);
+        break;
+    }
+    
+    delay(LCD_DELAY); //delete or extend as necessary
+  }
+
+  /*
+   * HERE: Need to define an enum type where enum number { one='0x1', two='0x2', three..}
+   * where vibeMagnitude can be turned into a value readable by lc.setDigit() so that the 
+   * vibeMagnitude can be displayed
+   */
+}
