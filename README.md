@@ -20,11 +20,11 @@ I currently have an ~~STM32 L475 Discovery board I plan to use the accelerometer
 **Update 12.11.18:** I will use the IMU's acclerometer raw value readings in the z-axis to determine levels of vibration.
 
 **Update 13.11.18:** Flowchart for firmware: 
-![Flowchart](vsFlow.pdf ) 
+![Flowchart](vsFlow.svg ) 
 
 ## Schematic diagram:  
 
-![Schematic](vsSchematic.svg) 
+![Schematic](vsSchematic.png) 
 
 
 
