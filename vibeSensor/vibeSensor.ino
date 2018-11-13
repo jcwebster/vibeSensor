@@ -18,7 +18,7 @@
 #define LCD_DELAY    50   //250ms delay at the end of each loop (for lcd display)
 #define HEARTBEAT_DELAY 1000  //2s period heartbeat
 #define RUN_TIME      (10000)
-#define NUM_PTS       (700)
+#define NUM_PTS       (500)
 /* Private constants ------------------------------------------------------------*/
 //const int buttonPin = 2;    // the number of the footswitch pin
 //int buttonPushed;             // the current reading from the input pin
@@ -51,8 +51,8 @@ int progressFraction =0;
 
 uint32_t daqPt = 0;
 uint8_t data[NUM_PTS] = {};
-uint32_t sum = 0;
-uint8_t vibeMagnitude = 0;
+uint32_t sumOfSqs = 0;
+float vibeMagnitude = 0;
 
 /*
  * stage =0; after initialization finishes the first time
@@ -87,7 +87,10 @@ void msgDisplay();
 bool boardLevelled();
 void displayGO();
 void displayPush2Start();
-void results(uint8_t);
+void results(float);
+void displayNumber(uint8_t, uint8_t, float);
+
+
 
 #ifdef DEBUG
 /*    testing only    */
@@ -248,11 +251,12 @@ void loop() {
       /*
        * display data for user
        */
-       //when done, calculate RMS vibe      
+       //when done, calculate RMS vibe  
+       Serial.println(daqPt);    
       for (int k=0; k < (daqPt); k++){
         
-        data[k] = data[k]/1.4142135624;
-        sum += data[k];
+        data[k] = data[k]^2; //THIS IS NOT RMS...
+        sumOfSqs += data[k];
       }
       
       /* 
@@ -261,11 +265,13 @@ void loop() {
        *in g's (vibeMagnitude*9.8 gives m/s2)    
        *  THIS IS WHAT I WANT OUTPUT  
        */
-      vibeMagnitude = sum / (NUM_PTS); 
+      vibeMagnitude = sqrt(sumOfSqs)/daqPt; 
+      
       daqPt = 0;
 
       lc.clearDisplay(0);
       results(vibeMagnitude);
+      delay(7500);
       stage=0;
       break;
     default:
@@ -285,7 +291,7 @@ void loop() {
   */
 void hello(){
 
-  for (int i=0; i<5; i++){
+  for (int i=0; i<5; i++){ //HELLO
     switch(i){
       case 0: //h
         lc.setChar(0,4,'h',0); 
@@ -320,7 +326,7 @@ void hello(){
 void freezeAndCalibrate(){
   lc.clearDisplay(0);
 
-  for (int i=0; i<10; i++){
+  for (int i=0; i<10; i++){ //LEVEL ...
     switch(i){
       case 0: //L
         lc.setChar(0,7,'L',0); 
@@ -505,7 +511,7 @@ bool boardLevelled(){
   */
 void displayGetReady(){
   
-  for (int i=0; i<12; i++){
+  for (int i=0; i<12; i++){ //PREPARE 2 PUSH
     switch(i){
       case 0: //P
         lc.clearDisplay(0);
@@ -566,7 +572,7 @@ void displayGO(){
   int elapsed = 0;
   long int startGo = millis();
 
-  for (int i=0; i<5; i++){
+  for (int i=0; i<5; i++){ //G O !
     switch(i){
       //art.
       case 0: //G
@@ -609,7 +615,7 @@ void displayGO(){
   * @param  None
   * @retval None
   */
-void results(uint8_t vibe){
+void results(float vibe){
   
 //  const int GO_TIME = 2500; //how long to blink GO for
 //  int elapsed = 0;
@@ -643,31 +649,28 @@ void results(uint8_t vibe){
   }
   
   delay(2500);
-  for (int i=0; i<6; i++){ //rEcord
+  for (int i=0; i<5; i++){ //END
     switch(i){
-      case 0: //r
+      case 0: //E
         lc.clearDisplay(0);
-        lc.setRow(0,6, B00000101); 
+        lc.setRow(0,7,B01001111); 
         break;
-      case 1: //e
-        lc.setRow(0,5,B01001111); 
+      case 1: //n
+        lc.setRow(0,6,B00010101); 
         break;
-      case 2: //c
-        lc.setRow(0,4,B00001101);
+      case 2: //d
+        lc.setRow(0,5,B10111101);
         break;
-      case 3: //o
-        lc.setRow(0,3,B00011101); 
+      case 3: //
+        lc.setRow(0,4,B10000000);
         break;
-      case 4: //r
-        lc.setRow(0,2, B00000101); 
+      case 4:
+        displayNumber(0,3, vibe);
         break;
-      case 5: //d
-        lc.setRow(0,1,B10111101);
-        lc.setRow(0,0,B10000000);
+      default:
         break;
     }
-    
-    delay(LCD_DELAY); //delete or extend as necessary
+    delay(LCD_DELAY); 
   }
 
   /*
@@ -675,4 +678,48 @@ void results(uint8_t vibe){
    * where vibeMagnitude can be turned into a value readable by lc.setDigit() so that the 
    * vibeMagnitude can be displayed
    */
-}
+
+  
+}//end: results
+
+/**
+  * @brief  Display a number at given starting pos
+  *       Note: assume 0 < value < 10
+  * @param  start: digit position to start number at
+  *         float value: the value to display
+  * @retval None
+  */
+void displayNumber(uint8_t device, uint8_t start, float value){
+
+  uint8_t hunds, tens, ones;
+  uint16_t displayValue=0;
+//e.g. 2.25
+  //multiply by 100
+  displayValue = value * 100;
+  //225
+  //get hundreds
+  hunds = displayValue / 100;
+  //get tens
+  tens = (displayValue / 10) % 10;
+  //get ones
+  ones = displayValue % 10;
+  //build display
+#ifdef DEBUG
+      Serial.print("float: ");
+      Serial.println(value);
+      Serial.print("hunds: ");
+      Serial.print(hunds);
+      Serial.print(" tens: ");
+      Serial.print(tens);
+      Serial.print(" ones: ");
+      Serial.println(ones);
+      delay(50);
+#endif
+
+  lc.setDigit(device, start, hunds, 1);
+  delay(LCD_DELAY);
+  lc.setDigit(device, start-1, tens, 0);
+  delay(LCD_DELAY);
+  lc.setDigit(device, start-2, ones, 0);
+  delay(LCD_DELAY);
+}//end:displayNumber

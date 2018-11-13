@@ -15,11 +15,17 @@ I currently have an ~~STM32 L475 Discovery board I plan to use the accelerometer
 
 **Update 8.09.18:** Selected MPU-6050 6-axis acclerometer and gyro for vibration reading. I could have selected a simpler sensor (such as [this one](https://www.adafruit.com/product/2384)) but I like the idea of developing my I2C and SPI interfacing skills. Using [LEDControl](https://github.com/wayoda/LedControl) and [MPU6050](https://github.com/tockn/MPU6050_tockn) Arduino libraries.
 
-**Update 11.09.18:** Check out a visual representation of the program flow [here](https://www.lucidchart.com/documents/view/690388a5-8b3c-460a-bcd9-24e1e40fabe5/0).  
-
 **Update 11.11.18:** Firmware flowchart updated (above).
 
 **Update 12.11.18:** I will use the IMU's acclerometer raw value readings in the z-axis to determine levels of vibration.
+
+**Update 13.11.18:** Flowchart for firmware: 
+![Flowchart](vsFlow.pdf ) 
+
+## Schematic diagram:  
+
+![Schematic](vsSchematic.svg) 
+
 
 
 **You're welcome to use any of my code you like, but please give credit and I'd love to hear about it!**
