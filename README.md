@@ -26,6 +26,7 @@ I currently have an ~~STM32 L475 Discovery board I plan to use the accelerometer
 
 ![Schematic](vsSchematic.png) 
 
-
+**Update 29.11.18:** Current CAD:
+![isoview](vibeSensorIso.png)
 
 **You're welcome to use any of my code you like, but please give credit and I'd love to hear about it!**
