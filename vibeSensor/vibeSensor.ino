@@ -6,7 +6,10 @@
   *          meant to give comparative readings when used with different wheel/truck setups.
   ******************************************************************************
  */
- 
+ /*
+  * TODO:
+  * move all functions to vibeSensor library
+  */
 /* Includes ------------------------------------------------------------------*/
 #include <MPU6050_tockn.h>
 #include <LedControl.h> 
@@ -684,7 +687,7 @@ void results(float vibe){
 
 /**
   * @brief  Display a number at given starting pos
-  *       Note: assume 0 < value < 10
+  *         Note: assume 0 < value < 10
   * @param  start: digit position to start number at
   *         float value: the value to display
   * @retval None
@@ -715,7 +718,10 @@ void displayNumber(uint8_t device, uint8_t start, float value){
       Serial.println(ones);
       delay(50);
 #endif
-
+//todo:
+// mask hunds with '.' using '&' and set dig with that value, i.e.
+//  floatMain = hunds & 0x0000001;
+//  lc.setDigit(device, start, floatMain,1);
   lc.setDigit(device, start, hunds, 1);
   delay(LCD_DELAY);
   lc.setDigit(device, start-1, tens, 0);

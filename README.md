@@ -20,13 +20,24 @@ I currently have an ~~STM32 L475 Discovery board I plan to use the accelerometer
 **Update 12.11.18:** I will use the IMU's acclerometer raw value readings in the z-axis to determine levels of vibration.
 
 **Update 13.11.18:** Flowchart for firmware: 
-![Flowchart](vsFlow.svg ) 
+![Flowchart](media/vsFlow.svg ) 
 
 ## Schematic diagram:  
 
-![Schematic](vsSchematic.png) 
+![Schematic](media/vsSchematic.png) 
 
 **Update 29.11.18:** Current CAD:
-![isoview](vibeSensorIso.png)
+![isoview](media/vibeSensorIso.png)
+
+
+**Update 2.05.19:** After a long break focusing on school, I finished putting the sensor together. Had to modify several components including the battery pack, main body, and foot button. Pictures in /media. During initial testing, the platform was surprisingly strong enough to prevent bolts from tearing through. Display and added power LED was too dim for daylight on a cloudy day. Kicked the power switch by accident and broke the connection [somewhere TBD].  
+**TODO:**  
+
+- "Push to begin" msg annoyingly hard coded to display 3x before button push is registered. 
+- 2nd msg "to begin" should be changed to say something different. 
+- Progress bar not displaying all the way through. 
+- Resultant vibration level should be displayed longer.  
+
+
 
 **You're welcome to use any of my code you like, but please give credit and I'd love to hear about it!**
